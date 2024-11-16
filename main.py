@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
+import asyncio
 import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
@@ -28,16 +29,22 @@ format = [
 ]
 
 allowed_role = ['Bapak Informatikans', 'Staf']
-reminder_intervals = [1, 3] # Days before event to send reminder
+reminder_intervals = {
+    259200: "3d",
+    86400: "1d",
+    43200: "12h",
+}
 
 @bot.event
 async def on_ready():
     print(f'We have logged in as {bot.user}')
+    bot.loop.create_task(reminder_loop())
     try:
         synced = await bot.tree.sync()
         print(f"Synced {len(synced)} command(s)")
     except Exception as e:
         print(f"Error syncing commands: {e}")
+        
 
 @bot.event
 async def on_message(message):
@@ -90,6 +97,44 @@ HMIF UPNVJ {year}
 #{dept_name_nospaces}
 #MenuntunIlmu
 """
+
+async def reminder_loop(theme, description, date, time, dept_name):
+    """
+    Schedule reminders for upcoming events.
+    """
+
+    channel = discord.utils.get(bot.get_all_channels(), name="bot")
+
+    if not channel:
+        print("Channel 'bot' not found.")
+        return
+    
+    event_time = datetime.strptime(date, "%d-%m-%Y")
+    date_event = event_time.strftime("%A, %d %B %Y")
+    year = datetime.now().year
+
+    while True:
+
+        # Calculate seconds until event
+        date_now = datetime.now()
+        date_day_difference = (event_time - date_now).days
+
+        if date_day_difference in reminder_intervals:
+            message = TEMPLATE_KERNEL.format(
+                days_left=date_day_difference,
+                theme=theme,
+                description=description,
+                date_event_in_ID=date_event,
+                time=time,
+                dept_name=dept_name,
+                dept_name_nospaces=dept_name.replace(" ", ""),
+                year=year,
+            )
+
+            await channel.send(message)
+
+        await asyncio.sleep(3600)
+
 
 @bot.tree.command(
     name="schedule_event", description="Schedule an event with a date and description"
