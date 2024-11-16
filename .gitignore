@@ -1,2 +1,4 @@
-bot-env
 .env
+
+bot-env
+__pycache__
