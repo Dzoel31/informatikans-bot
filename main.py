@@ -1,32 +1,45 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
 
-import asyncio
 import os
-import asyncio
-
 from dotenv import load_dotenv
-from cogs.autorole import Autorole
+import asyncio
 
 load_dotenv()
 
-async def setup(bot, cog):
-    await bot.add_cog(cog(bot))
-
-if __name__ == '__main__':
-    token = os.getenv("DISCORD_TOKEN")
+token = os.getenv('DISCORD_TOKEN')
 
 intents = discord.Intents.default()
+intents.members = True
 intents.message_content = True
-intents.guild_scheduled_events = True
 intents.guilds = True
+intents.guild_scheduled_events = True
 
-activity = discord.Activity(type=discord.ActivityType.watching, name="Maintenance")
+activity = discord.Game(name="with Informatikans | use $")
 
-    bot = discord.ext.commands.Bot(command_prefix='$', intents=intents)
+bot = commands.Bot(command_prefix='$', intents=intents)
 
-    # Setup cogs here!
-    asyncio.run(setup(bot, Autorole))
-    
-    bot.run(token)
+initial_extensions = [
+    'cogs.autorole',
+    'cogs.ping',
+    'cogs.event',
+]
+
+@bot.event
+async def on_ready():
+    print(f'Logged in as {bot.user.name}')
+    print('------')
+    sync_slash_commands = await bot.tree.sync()
+    print(f"Synced {len(sync_slash_commands)} slash commands")
+    await bot.change_presence(activity=activity)
+
+async def main():
+    for extension in initial_extensions:
+        await bot.load_extension(extension)
+
+    await bot.start(token)
+
+if __name__ == '__main__':
+    asyncio.run(main())
+
+    # bot.run(token)
